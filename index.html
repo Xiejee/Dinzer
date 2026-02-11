@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dinzer - 你的代码搜索引擎</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-blue: #4285F4; /* 动态颜色将覆盖此值 */
+            --text-main: #202124;
+            --text-gray: #5f6368;
+            --border-color: #dfe1e5;
+            --shadow: 0 1px 6px rgba(32,33,36,0.28);
+            --app-max-width: 100%;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Google Sans', 'Roboto', 'Arial', sans-serif; 
+            background-color: #f8f9fa;
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 模式容器 */
+        #app-container {
+            width: var(--app-max-width);
+            max-width: var(--app-max-width);
+            background: #fff;
+            height: 100%;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            transition: width 0.3s ease, max-width 0.3s ease;
+            overflow: hidden;
+        }
+
+        /* 视图切换 */
+        .view {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .view.active { display: flex; opacity: 1; z-index: 10; }
+
+        /* 左上角搜索模式切换 */
+        .mode-switch-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .mode-select {
+            padding: 8px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            background: #f8f9fa;
+            color: var(--text-gray);
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-select:hover {
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* 右上角工具栏 */
+        .top-toolbar {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            /* background: #f1f3f4; */
+            /* padding: 5px 12px; */
+            border-radius: 20px;
+            color: var(--text-main);
+        }
+
+        .login-btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+        .login-btn:hover { opacity: 0.9; }
+
+        /* 用户头像样式 */
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .user-avatar:hover { transform: scale(1.05); }
+
+        .tool-icon {
+            font-size: 20px;
+            color: var(--text-gray);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .tool-icon:hover { color: var(--primary-blue); }
+
+        /* 设置菜单弹窗 */
+        #settings-modal {
+            display: none;
+            position: absolute;
+            top: 55px;
+            right: 20px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            z-index: 1001;
+            padding: 10px 0;
+            min-width: 150px;
+        }
+        .menu-item {
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .menu-item:hover { background: #f8f9fa; }
+
+        /* 主页布局调整 */
+        #view-home { 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px;
+            /* 关键修改：通过 padding-bottom 将视觉重心上移 */
+            padding-bottom: 15vh; 
+        }
+        .logo {
+            font-size: clamp(48px, 15vw, 92px);
+            font-weight: bold;
+            color: var(--primary-blue);
+            margin-bottom: 30px;
+            letter-spacing: -3px;
+            user-select: none;
+        }
+
+        .search-container { width: 100%; max-width: 584px; }
+        .search-bar {
+            display: flex;
+            align-items: center;
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 0 16px;
+            height: 48px;
+            transition: box-shadow 0.2s;
+            background: #fff;
+        }
+        .search-bar:hover, .search-bar:focus-within { box-shadow: var(--shadow); border-color: transparent; }
+        .search-input { flex: 1; border: none; outline: none; font-size: 16px; padding: 0 10px; background: transparent; height: 100%; color: #000; width: 50px; }
+
+        .search-btn { color: var(--primary-blue); cursor: pointer; padding: 8px; font-size: 18px; }
+
+        /* 结果页 */
+        #view-results { flex-direction: column; background: #fff; }
+        .results-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #ebebeb;
+            display: flex;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 100;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .logo-small { font-size: 24px; font-weight: bold; color: var(--primary-blue); margin-right: 20px; cursor: pointer; }
+        .results-content { padding: 20px; max-width: 800px; width: 100%; margin: 0 auto; }
+        .stats { color: var(--text-gray); font-size: 13px; margin-bottom: 15px; }
+
+        .result-card { padding: 12px 0; border-bottom: 1px solid #f1f3f4; cursor: pointer; opacity: 0; transform: translateY(10px); }
+        .result-title { color: #1a0dab; font-size: 18px; margin-bottom: 4px; display: block; text-decoration: none; word-break: break-all; }
+        .result-path { color: #006621; font-size: 13px; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .result-desc { font-size: 13px; color: #4d5156; }
+
+        /* 手机适配 - 媒体查询 */
+        @media (max-width: 600px) {
+            .top-toolbar { top: 10px; right: 10px; }
+            .mode-switch-container { top: 10px; left: 10px; }
+            .logo { margin-bottom: 20px; }
+            .results-header { padding: 10px; }
+            .logo-small { margin-right: 10px; font-size: 20px; }
+        }
+
+        /* 模式强制样式 */
+        .mobile-mode { --app-max-width: 375px; margin: auto; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }
+        .desktop-mode { --app-max-width: 100%; }
+
+        /* 动画与辅助 */
+        @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
+        .loading { border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-blue); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 30px auto; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        
+        <!-- 左上角：搜索模式切换 -->
+        <div class="mode-switch-container">
+            <select id="search-mode" class="mode-select" onchange="triggerSearchIfActive()">
+                <option value="all">🌐 全局搜索</option>
+                <option value="html">📄 仅 HTML</option>
+                <option value="txt">📝 仅 TXT</option>
+            </select>
+        </div>
+
+        <!-- 右上角：工具栏 & 用户区 -->
+        <div class="top-toolbar">
+            <div id="user-area">
+                <button class="login-btn" onclick="loginSSO()">登录松鹤账号</button>
+            </div>
+            <i class="fas fa-cog tool-icon" onclick="toggleSettings()"></i>
+        </div>
+
+        <!-- 设置弹窗 -->
+        <div id="settings-modal">
+            <div class="menu-item" onclick="setMode('desktop')">
+                <i class="fas fa-desktop"></i> 电脑模式
+            </div>
+            <div class="menu-item" onclick="setMode('mobile')">
+                <i class="fas fa-mobile-alt"></i> 手机模式
+            </div>
+            <div id="logout-option" class="menu-item" onclick="logout()" style="display:none; color:#d93025; border-top:1px solid #eee;">
+                <i class="fas fa-sign-out-alt"></i> 退出登录
+            </div>
+        </div>
+
+        <!-- 主页 -->
+        <div id="view-home" class="view active">
+            <div class="logo">Dinzer</div>
+            <div class="search-container">
+                <div class="search-bar">
+                    <i class="fas fa-search" style="color:#9aa0a6"></i>
+                    <input type="text" class="search-input" id="input-home" placeholder="搜索所有仓库文件..." autofocus>
+                    <i class="fas fa-search search-btn" onclick="triggerSearch('input-home')"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结果页 -->
+        <div id="view-results" class="view">
+            <div class="results-header">
+                <div class="logo-small" onclick="goHome()">Dinzer</div>
+                <div class="search-bar" style="height:36px; flex:1; max-width:500px">
+                    <input type="text" class="search-input" id="input-results">
+                    <i class="fas fa-search search-btn" onclick="triggerSearch('input-results')" style="font-size:14px"></i>
+                </div>
+            </div>
+            <div class="results-content" id="results-box"></div>
+        </div>
+
+        <!-- 阅读器 -->
+        <div id="view-viewer" class="view" style="flex-direction:column">
+            <div class="viewer-header" style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <strong id="viewer-title" style="word-break:break-all; font-size:14px">文件名</strong>
+                <span id="viewer-repo" style="color:#666; font-size:12px">仓库</span>
+            </div>
+            <div class="viewer-content" id="viewer-body" style="flex:1; padding:15px; overflow-y:auto; font-family:monospace; white-space:pre-wrap; background:#fdfdfd; font-size:13px;"></div>
+        </div>
+
+        <div class="home-fab" id="home-fab" onclick="goHome()" style="position:fixed; bottom:20px; right:20px; width:45px; height:45px; background:white; border:1px solid #ddd; border-radius:50%; display:none; align-items:center; justify-content:center; box-shadow:0 2px 10px rgba(0,0,0,0.1); cursor:pointer; z-index:1000;">
+            <i class="fas fa-home" style="color:var(--primary-blue)"></i>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            user: "Xiejee",
+            repos: ["SCN-News", "mental_state", "particle", "SSZ-Rail", "Jxie002_250814"],
+            t1: "ghp_6pSfHigw0Rrjt5KlrXwvt",
+            t2: "29Nk2Wi4J2soacY",
+            sso: "https://xiejee.github.io/Songhe-account/index.html"
+        };
+        const TOKEN = CONFIG.t1 + CONFIG.t2;
+
+        // --- 1. SSO 登录逻辑 & 用户头像 ---
+        function loginSSO() {
+            const redirect = encodeURIComponent(window.location.href);
+            window.location.href = `${CONFIG.sso}?redirect=${redirect}`;
+        }
+
+        function logout() {
+            localStorage.removeItem('songhe_user');
+            location.reload();
+        }
+
+        function checkLogin() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ssoToken = urlParams.get('songhe_token');
+
+            if (ssoToken) {
+                try {
+                    const decoded = JSON.parse(decodeURIComponent(atob(ssoToken)));
+                    localStorage.setItem('songhe_user', JSON.stringify(decoded));
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    applyUserStyle(decoded);
+                } catch (e) {
+                    console.error("Token 解析失败", e);
+                }
+            } else {
+                const savedUser = localStorage.getItem('songhe_user');
+                if (savedUser) applyUserStyle(JSON.parse(savedUser));
+            }
+        }
+
+        function applyUserStyle(user) {
+            if (!user) return;
+            // 动态设置主题色
+            const themeColor = user.color || '#4285F4';
+            document.documentElement.style.setProperty('--primary-blue', themeColor);
+            
+            // 渲染用户头像
+            const initial = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+            document.getElementById('user-area').innerHTML = `
+                <div class="user-avatar" style="background-color: ${themeColor};" title="${user.name}" onclick="toggleSettings()">
+                    ${initial}
+                </div>
+            `;
+            
+            // 显示退出选项
+            document.getElementById('logout-option').style.display = 'flex';
+        }
+
+        // --- 2. 模式切换逻辑 ---
+        function toggleSettings() {
+            const modal = document.getElementById('settings-modal');
+            modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function setMode(mode) {
+            const container = document.getElementById('app-container');
+            if (mode === 'mobile') {
+                container.className = 'mobile-mode';
+            } else {
+                container.className = 'desktop-mode';
+            }
+            toggleSettings();
+        }
+
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.tool-icon') && !e.target.closest('.user-avatar') && !e.target.closest('#settings-modal')) {
+                document.getElementById('settings-modal').style.display = 'none';
+            }
+        });
+
+        // --- 3. 搜索与视图逻辑 ---
+        function switchView(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('home-fab').style.display = (id === 'view-home') ? 'none' : 'flex';
+        }
+
+        function goHome() {
+            switchView('view-home');
+            document.getElementById('input-home').value = '';
+            setTimeout(() => document.getElementById('input-home').focus(), 100);
+        }
+
+        // 当改变搜索模式时，如果在结果页，立即刷新搜索
+        function triggerSearchIfActive() {
+            const currentInput = document.getElementById('input-results').value.trim() || document.getElementById('input-home').value.trim();
+            if (currentInput && document.getElementById('view-results').classList.contains('active')) {
+                startGlobalScan(currentInput);
+            }
+        }
+
+        function triggerSearch(inputId) {
+            const val = document.getElementById(inputId).value.trim();
+            if (val) startGlobalScan(val);
+        }
+
+        async function startGlobalScan(query) {
+            const q = query.toLowerCase();
+            const mode = document.getElementById('search-mode').value; // 获取当前模式
+
+            document.getElementById('input-results').value = query;
+            switchView('view-results');
+            
+            const box = document.getElementById('results-box');
+            box.innerHTML = `<div class="loading"></div><p style="text-align:center;color:#666;font-size:13px">正在扫描 (${mode === 'all' ? '全局' : mode})...</p>`;
+
+            const tasks = CONFIG.repos.map(repo => scanRepo(repo, q));
+            try {
+                const resultsArray = await Promise.all(tasks);
+                let allResults = resultsArray.flat();
+
+                // 前端过滤逻辑
+                if (mode === 'html') {
+                    allResults = allResults.filter(item => item.name.toLowerCase().endsWith('.html'));
+                } else if (mode === 'txt') {
+                    allResults = allResults.filter(item => item.name.toLowerCase().endsWith('.txt'));
+                }
+
+                box.innerHTML = `<div class="stats">找到约 ${allResults.length} 个结果</div>`;
+                
+                if (allResults.length === 0) {
+                    box.innerHTML += `<p style="margin-top:20px; font-size:14px">在此模式下未找到相关结果。</p>`;
+                    return;
+                }
+
+                allResults.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'result-card';
+                    card.innerHTML = `
+                        <div class="result-path">${item.repo} › ${item.path}</div>
+                        <a class="result-title">${item.name}</a>
+                        <div class="result-desc">${item.name.split('.').pop().toUpperCase()} 文件</div>
+                    `;
+                    card.onclick = () => processClick(item);
+                    box.appendChild(card);
+                    setTimeout(() => card.style.animation = `slideIn 0.3s ease forwards`, index * 30);
+                });
+            } catch (err) {
+                box.innerHTML = `<p style="color:red; font-size:13px">搜索出错。</p>`;
+            }
+        }
+
+        async function scanRepo(repoName, query) {
+            try {
+                const repoInfo = await fetch(`https://api.github.com/repos/${CONFIG.user}/${repoName}`, {
+                    headers: { "Authorization": `token ${TOKEN}` }
+                }).then(r => r.json());
+                const branch = repoInfo.default_branch || 'main';
+                const treeRes = await fetch(`https://api.github.com/repos/${CONFIG.user}/${repoName}/git/trees/${branch}?recursive=1`, {
+                    headers: { "Authorization": `token ${TOKEN}` }
+                }).then(r => r.json());
+
+                if (!treeRes.tree) return [];
+                const matches = treeRes.tree.filter(node => node.type === 'blob' && node.path.toLowerCase().includes(query));
+
+                return matches.map(m => ({
+                    name: m.path.split('/').pop(),
+                    path: m.path,
+                    repo: repoName,
+                    githubUrl: `https://github.com/${CONFIG.user}/${repoName}/blob/${branch}/${m.path}`,
+                    renderUrl: `https://htmlpreview.github.io/?https://github.com/${CONFIG.user}/${repoName}/blob/${branch}/${m.path}`,
+                    rawUrl: `https://api.github.com/repos/${CONFIG.user}/${repoName}/contents/${m.path}`
+                }));
+            } catch (e) { return []; }
+        }
+
+        function processClick(item) {
+            const ext = item.name.split('.').pop().toLowerCase();
+            if (ext === 'html') {
+                window.open(item.renderUrl, '_blank');
+            } else if (ext === 'txt') {
+                loadTxtContent(item);
+            } else {
+                if (confirm(`确认下载文件: ${item.name}？`)) downloadBlob(item);
+            }
+        }
+
+        async function loadTxtContent(item) {
+            switchView('view-viewer');
+            document.getElementById('viewer-title').innerText = item.name;
+            document.getElementById('viewer-repo').innerText = item.repo;
+            const body = document.getElementById('viewer-body');
+            body.innerHTML = '<div class="loading"></div>';
+            try {
+                const res = await fetch(item.rawUrl, {
+                    headers: { "Authorization": `token ${TOKEN}`, "Accept": "application/vnd.github.v3.raw" }
+                });
+                body.innerText = await res.text();
+            } catch (e) { body.innerText = "加载失败。"; }
+        }
+
+        async function downloadBlob(item) {
+            try {
+                const res = await fetch(item.rawUrl, {
+                    headers: { "Authorization": `token ${TOKEN}`, "Accept": "application/vnd.github.v3.raw" }
+                });
+                const blob = await res.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = item.name;
+                link.click();
+            } catch (e) { window.open(item.githubUrl, '_blank'); }
+        }
+
+        // 初始化
+        window.onload = () => {
+            checkLogin();
+            if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+                // 手机访问处理
+            }
+        };
+
+        document.getElementById('input-home').addEventListener('keydown', (e) => e.key === 'Enter' && triggerSearch('input-home'));
+        document.getElementById('input-results').addEventListener('keydown', (e) => e.key === 'Enter' && triggerSearch('input-results'));
+    </script>
+</body>
+</html>
