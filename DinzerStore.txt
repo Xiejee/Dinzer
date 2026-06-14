@@ -9,3 +9,7 @@
 [name:"文案GO",site:"http://www.wenangou.com/xieyin.html"]
 [name:"淘声",site:"https://www.tosound.com/"]
 [name:"多摸鱼",site:"https://duomoyu.com/"]
+[name:"米兔音乐",site:"https://www.qqmp3.vip/"]
+[name:"纪录片天地",site:"http://www.jlpcn.net/"]
+[name:"Dinzer Web版",site:"https://dinzer.xo.je/?i=1"]
+[name:"SCN Web版",site:"https://xiejee.github.io/SCN-News/index.html"]
