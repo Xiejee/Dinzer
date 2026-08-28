@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高三倒计时</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0a0606;
+            color: #dddddd;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 30px 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 全屏暗角压迫 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.5) 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* 压抑呼吸背景 */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, rgba(50,3,3,0.2) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+            animation: oppressiveBreathe 6s ease-in-out infinite;
+        }
+
+        @keyframes oppressiveBreathe {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.85; }
+        }
+
+        /* 顶部标题 */
+        h1 {
+            color: #b00000;
+            font-size: 2rem;
+            letter-spacing: 4px;
+            font-weight: 700;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 0 20px rgba(180, 0, 0, 0.8);
+            animation: titleFlicker 4s infinite;
+        }
+
+        @keyframes titleFlicker {
+            0%, 95%, 100% { opacity: 1; }
+            96% { opacity: 0.3; }
+            97% { opacity: 1; }
+            98% { opacity: 0.5; }
+            99% { opacity: 1; }
+        }
+
+        /* 中间圆环容器 */
+        .countdown-container {
+            position: relative;
+            width: 340px;
+            height: 340px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            border: 3px solid #3a0a0a;
+            box-shadow: 0 0 20px rgba(60, 0, 0, 0.15), inset 0 0 40px rgba(0,0,0,0.6);
+            transition: all 0.8s ease;
+            z-index: 2;
+            animation: dyingBreath 5s ease-in-out infinite;
+        }
+
+        @keyframes dyingBreath {
+            0%, 100% {
+                box-shadow: 0 0 30px rgba(70, 2, 2, 0.3), inset 0 0 40px rgba(0,0,0,0.6);
+                border-color: #2a0505;
+            }
+            50% {
+                box-shadow: 0 0 60px rgba(110, 5, 5, 0.55), inset 0 0 40px rgba(0,0,0,0.6);
+                border-color: #4a0808;
+            }
+        }
+
+        /* 圆环变红状态：急促喘息 */
+        .countdown-container.urgent {
+            animation: laboredBreath 2.5s ease-in-out infinite;
+        }
+
+        @keyframes laboredBreath {
+            0%, 100% {
+                box-shadow: 0 0 35px rgba(120, 2, 2, 0.4), inset 0 0 40px rgba(0,0,0,0.6);
+                border-color: #4a0606;
+            }
+            50% {
+                box-shadow: 0 0 75px rgba(160, 5, 5, 0.6), inset 0 0 40px rgba(0,0,0,0.6);
+                border-color: #8a0606;
+            }
+        }
+
+        /* 倒计时文字样式 */
+        .countdown-text {
+            text-align: center;
+            font-size: 1.15rem;
+            line-height: 1.8;
+            color: #ccc;
+        }
+
+        .countdown-text .time-num {
+            font-size: 1.8rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            color: #e84444;
+            text-shadow: 0 0 12px rgba(220, 30, 30, 0.7);
+        }
+
+        .countdown-text .label {
+            color: #999;
+            font-size: 0.95rem;
+        }
+
+        /* 暗黑语录区域 */
+        .dark-quote {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            z-index: 2;
+            min-height: 50px;
+        }
+
+        .dark-quote p {
+            color: #aaa;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            letter-spacing: 1px;
+            transition: opacity 0.8s ease;
+            font-style: italic;
+        }
+
+        .dark-quote .quote-highlight {
+            color: #8b0000;
+            font-weight: 600;
+        }
+
+        /* 结束后的提示文字 */
+        .message-text {
+            color: #8b0000;
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 0 20px;
+            line-height: 1.5;
+        }
+
+        /* 底部信息 */
+        footer {
+            color: #777;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            z-index: 2;
+            text-align: center;
+        }
+
+        /* 焦虑计数器 */
+        .anxiety-counter {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            z-index: 2;
+            text-align: right;
+            font-size: 0.75rem;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        .anxiety-counter .num {
+            color: #bb3030;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        /* 左上角浪费提醒 */
+        .waste-reminder {
+            position: absolute;
+            top: 70px;
+            left: 20px;
+            z-index: 2;
+            font-size: 0.75rem;
+            color: #888;
+            line-height: 1.6;
+            max-width: 130px;
+        }
+
+        .waste-reminder .num {
+            color: #bb3030;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        /* 故障文字效果 */
+        .glitch {
+            position: relative;
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch::before {
+            color: #ff0000;
+            z-index: -1;
+            animation: glitchAnim 3s infinite;
+        }
+
+        .glitch::after {
+            color: #00ffff;
+            z-index: -2;
+            animation: glitchAnim 3s infinite reverse;
+        }
+
+        @keyframes glitchAnim {
+            0%, 90%, 100% { transform: translate(0); }
+            91% { transform: translate(-2px, 1px); }
+            92% { transform: translate(2px, -1px); }
+            93% { transform: translate(0); }
+        }
+
+        /* 全屏闪烁警告 */
+        .flash-warning {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 0, 0, 0);
+            pointer-events: none;
+            z-index: 9998;
+            transition: background 0.1s;
+        }
+
+        .flash-warning.active {
+            animation: flashRed 0.3s ease;
+        }
+
+        @keyframes flashRed {
+            0% { background: rgba(255, 0, 0, 0); }
+            50% { background: rgba(255, 0, 0, 0.15); }
+            100% { background: rgba(255, 0, 0, 0); }
+        }
+
+        /* 压力进度条 */
+        .pressure-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #1a0000, #8b0000, #ff0000);
+            z-index: 9997;
+            transition: width 1s linear;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        /* 开发者模式面板 */
+        .dev-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(10, 8, 8, 0.97);
+            border: 2px solid #b00000;
+            border-radius: 12px;
+            padding: 28px 32px;
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 360px;
+            box-shadow: 0 0 60px rgba(180, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+        }
+
+        .dev-panel.active {
+            display: flex;
+            animation: devPanelIn 0.25s ease forwards;
+        }
+
+        @keyframes devPanelIn {
+            from { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
+            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .dev-panel h2 {
+            color: #e84444;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            border-bottom: 1px solid #3a0a0a;
+            padding-bottom: 10px;
+        }
+
+        .dev-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .dev-row label {
+            min-width: 90px;
+            color: #888;
+        }
+
+        .dev-row input {
+            flex: 1;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid #3a0a0a;
+            border-radius: 6px;
+            padding: 8px 10px;
+            color: #e84444;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .dev-row input:focus {
+            border-color: #b00000;
+            box-shadow: 0 0 8px rgba(180, 0, 0, 0.3);
+        }
+
+        .dev-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .dev-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .dev-btn.apply {
+            background: #8b0000;
+            color: #fff;
+        }
+
+        .dev-btn.apply:hover {
+            background: #b00000;
+            box-shadow: 0 0 12px rgba(180, 0, 0, 0.4);
+        }
+
+        .dev-btn.reset {
+            background: #2a2a2a;
+            color: #aaa;
+        }
+
+        .dev-btn.reset:hover {
+            background: #3a3a3a;
+            color: #fff;
+        }
+
+        .dev-btn.close {
+            background: #1a1a1a;
+            color: #666;
+        }
+
+        .dev-btn.close:hover {
+            background: #2a2a2a;
+            color: #fff;
+        }
+
+        .dev-presets {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .dev-preset-btn {
+            background: rgba(139, 0, 0, 0.2);
+            border: 1px solid #3a0a0a;
+            color: #bb8080;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dev-preset-btn:hover {
+            background: rgba(139, 0, 0, 0.4);
+            color: #e84444;
+            border-color: #8b0000;
+        }
+
+        .dev-status {
+            font-size: 0.8rem;
+            color: #666;
+            text-align: center;
+            min-height: 18px;
+        }
+
+        .dev-status.active {
+            color: #e84444;
+        }
+
+        /* 开发者模式遮罩 */
+        .dev-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            display: none;
+        }
+
+        .dev-overlay.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="flash-warning" id="flash-warning"></div>
+
+    <h1 id="main-title" class="glitch" data-text="高三倒计时">高三倒计时</h1>
+
+    <div class="anxiety-counter" id="anxiety-counter">
+        此刻全国<span class="num" id="studying-count">0</span>人正在刷题<br>
+        你排第<span class="num" id="rank-num">???</span>名
+    </div>
+
+    <div class="waste-reminder" id="waste-reminder">
+        你在这页停留了<br>
+        <span class="num" id="waste-time">0</span>秒<br>
+        相当于少背了<br>
+        <span class="num" id="waste-words">0</span>个单词
+    </div>
+
+    <div class="countdown-container" id="circle-box">
+        <div class="countdown-text" id="timer-display">
+            正在计算...
+        </div>
+    </div>
+
+    <div class="dark-quote" id="dark-quote">
+        <p id="quote-text">时间不等人</p>
+    </div>
+
+    <footer id="footer-text">
+        程序制作时间是 2026年8月25日
+    </footer>
+
+    <div class="pressure-bar" id="pressure-bar" style="width: 0%"></div>
+
+    <div class="dev-overlay" id="dev-overlay"></div>
+    <div class="dev-panel" id="dev-panel">
+        <h2>开发者模式 · 时间伪造</h2>
+        <div class="dev-row">
+            <label>伪造日期</label>
+            <input type="date" id="dev-date-input">
+        </div>
+        <div class="dev-row">
+            <label>伪造时间</label>
+            <input type="time" id="dev-time-input" step="1">
+        </div>
+        <div class="dev-presets">
+            <button class="dev-preset-btn" data-preset="stage1-start">开学前1天</button>
+            <button class="dev-preset-btn" data-preset="stage1-end">开学当天</button>
+            <button class="dev-preset-btn" data-preset="stage2-start">高三第1天</button>
+            <button class="dev-preset-btn" data-preset="exam-7d">高考前7天</button>
+            <button class="dev-preset-btn" data-preset="exam-3d">高考前3天</button>
+            <button class="dev-preset-btn" data-preset="exam-day">高考当天</button>
+            <button class="dev-preset-btn" data-preset="after-exam">高考后</button>
+        </div>
+        <div class="dev-buttons">
+            <button class="dev-btn apply" id="dev-apply-btn">应用</button>
+            <button class="dev-btn reset" id="dev-reset-btn">恢复真实时间</button>
+            <button class="dev-btn close" id="dev-close-btn">关闭</button>
+        </div>
+        <div class="dev-status" id="dev-status">按 D 键打开/关闭开发者模式</div>
+    </div>
+
+    <script>
+        // 目标时间设置
+        const targetStage1 = new Date('2026-08-30T16:00:00').getTime();
+        const targetStage2 = new Date('2027-06-09T18:00:00').getTime();
+
+        const titleEl = document.getElementById('main-title');
+        const circleBox = document.getElementById('circle-box');
+        const timerDisplay = document.getElementById('timer-display');
+        const bodyEl = document.body;
+        const quoteText = document.getElementById('quote-text');
+        const studyingCount = document.getElementById('studying-count');
+        const rankNum = document.getElementById('rank-num');
+        const wasteTimeEl = document.getElementById('waste-time');
+        const wasteWordsEl = document.getElementById('waste-words');
+        const flashWarning = document.getElementById('flash-warning');
+        const pressureBar = document.getElementById('pressure-bar');
+
+        // 开发者模式：伪造时间
+        let fakeTime = null;
+        function getCurrentTime() {
+            return fakeTime !== null ? fakeTime : Date.now();
+        }
+
+        // 页面停留计时
+        let pageOpenTime = Date.now();
+
+        // 暗黑语录库
+        const darkQuotes = [
+            '你看这倒计时的每一秒，都在嘲笑你还没开始复习',
+            '别人在刷题，你在看倒计时',
+            '时间不等人，但你在等时间',
+            '每一秒的流逝，都是你与理想的距离在拉大',
+            '高考不会因为你紧张就推迟一天',
+            '你现在盯着的每一秒，都是回不去的青春',
+            '别看了，去看书',
+            '你的对手此刻正在背单词',
+            '倒计时不会停止，你的拖延也不会吗？',
+            '时间在走，你的分数在走吗？',
+            '再看也不会多给你一分钟',
+            '焦虑不能提分，但你现在连焦虑都没效率',
+            '每过一秒，就有人超过你一次',
+            '你以为时间很多？看看那个数字',
+            '别人家的孩子已经刷完一套卷子了',
+            '你在数日子，日子也在数你',
+            '现在偷的懒，高考都会还给你',
+            '不是时间不够，是你还不够狠',
+            '今天不拼命，明天命拼你',
+            '机会只留给有准备的人，你准备好了吗？',
+            '你现在的松懈，是未来的遗憾',
+            '所有你以为来得及的时间，最后都来不及了',
+            '别等倒计时归零才想起来努力',
+            '你现在看的这页倒计时，就是你浪费的证据',
+            '与其在这倒计时，不如去做一道题',
+            '时间不会因为你的恐惧而放慢脚步',
+            '你的人生没有倒退键，只有倒计时',
+            '每一个浪费的今天，都是明天后悔的昨天',
+            '你以为你在看时间，其实是时间在看你怎么浪费时间',
+            '距离高考每近一天，你的借口就少一个'
+        ];
+
+        // 阶段二专属暗黑语录
+        const stage2Quotes = [
+            '欢迎来到高三，这里是地狱的入口',
+            '高三开始了，你准备好受苦了吗？',
+            '从现在起，你的快乐已经到期',
+            '高三的每一天，都是高考倒计时的折磨',
+            '你以为高一高二很累？高三会让你怀念它们',
+            '这里没有退路，只有倒计时',
+            '从今天起，你的生活只剩两个字：高考',
+            '高三的苦，是为了高考后甜——如果你能撑到的话',
+            '欢迎进入全年无休的焦虑模式',
+            '你的睡眠从今天开始成为奢侈品'
+        ];
+
+        let currentQuoteIndex = 0;
+        let quoteInterval;
+
+        function rotateQuote(isStage2) {
+            const pool = isStage2 ? stage2Quotes : darkQuotes;
+            quoteText.style.opacity = 0;
+            setTimeout(() => {
+                currentQuoteIndex = (currentQuoteIndex + 1) % pool.length;
+                quoteText.innerHTML = pool[currentQuoteIndex];
+                quoteText.style.opacity = 1;
+            }, 800);
+        }
+
+        // 初始化语录
+        quoteText.innerHTML = darkQuotes[0];
+        quoteInterval = setInterval(() => rotateQuote(false), 5000);
+
+        // 焦虑计数器：模拟刷题人数
+        function updateAnxietyCounter() {
+            // 模拟此刻全国正在学习的高三人数（随机波动）
+            const base = 8500000;
+            const fluctuation = Math.floor(Math.random() * 500000);
+            const count = base + fluctuation;
+            studyingCount.textContent = count.toLocaleString();
+
+            // 模拟排名
+            const rank = Math.floor(Math.random() * 50000) + 10000;
+            rankNum.textContent = rank.toLocaleString();
+        }
+        updateAnxietyCounter();
+        setInterval(updateAnxietyCounter, 3000);
+
+        // 浪费时间提醒
+        function updateWasteTime() {
+            const seconds = Math.floor((Date.now() - pageOpenTime) / 1000);
+            wasteTimeEl.textContent = seconds;
+            // 假设每秒可以背0.5个单词
+            const words = Math.floor(seconds * 0.5);
+            wasteWordsEl.textContent = words;
+        }
+        updateWasteTime();
+        setInterval(updateWasteTime, 1000);
+
+        // 随机闪红警告
+        function triggerFlashWarning() {
+            flashWarning.classList.add('active');
+            setTimeout(() => flashWarning.classList.remove('active'), 300);
+        }
+
+        // 随机触发闪烁
+        setInterval(() => {
+            if (Math.random() < 0.15) {
+                triggerFlashWarning();
+            }
+        }, 5000);
+
+        // 更新压力进度条
+        function updatePressureBar(diff) {
+            // 压力值随时间推进而升高，越接近高考压力越大
+            const totalTime = targetStage2 - targetStage1;
+            const remainingTime = targetStage2 - getCurrentTime();
+            const progress = Math.max(0, Math.min(100, 100 - (remainingTime / totalTime * 100)));
+            pressureBar.style.width = progress + '%';
+        }
+
+        function updateCountdown() {
+            const now = getCurrentTime();
+
+            // 阶段一：距离 2026年8月30日 16:00
+            const diff1 = targetStage1 - now;
+
+            if (diff1 > 0) {
+                const days = Math.floor(diff1 / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff1 % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff1 % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff1 % (1000 * 60)) / 1000);
+
+                timerDisplay.innerHTML = `
+                    <span class="label">距离开学还有</span><br>
+                    <span class="time-num">${days}</span> <span class="label">天</span><br>
+                    <span class="time-num">${hours}</span> <span class="label">时</span> <span class="time-num">${minutes}</span> <span class="label">分</span><br>
+                    <span class="time-num">${seconds}</span> <span class="label">秒</span>
+                `;
+
+                // 最后一天进入紧急状态
+                if (diff1 <= 24 * 60 * 60 * 1000) {
+                    circleBox.classList.add('urgent');
+                    timerDisplay.style.color = '#ff3333';
+                }
+
+                updatePressureBar(diff1);
+                return;
+            }
+
+            // 阶段二：开学后，转为距离高考倒计时
+            const diff2 = targetStage2 - now;
+
+            if (diff2 > 0) {
+                circleBox.style.border = '3px solid #3a0a0a';
+                circleBox.style.boxShadow = '0 0 40px rgba(139, 0, 0, 0.2), inset 0 0 30px rgba(0,0,0,0.8)';
+
+                const days = Math.floor(diff2 / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff2 % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff2 % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff2 % (1000 * 60)) / 1000);
+
+                timerDisplay.className = 'message-text';
+                timerDisplay.innerHTML = `
+                    <span style="color:#555; font-size:1rem; font-weight:normal;">欢迎来到高三</span><br>
+                    <span style="color:#666; font-size:0.9rem; font-weight:normal;">距离高考结束还有</span><br>
+                    <span style="color:#cc2222; font-size:1.6rem;">${days}天 ${hours}时 ${minutes}分 ${seconds}秒</span>
+                `;
+
+                // 切换为阶段二语录
+                clearInterval(quoteInterval);
+                quoteText.innerHTML = stage2Quotes[0];
+                quoteInterval = setInterval(() => rotateQuote(true), 5000);
+
+                // 高考最后7天：紧急状态
+                if (diff2 <= 7 * 24 * 60 * 60 * 1000) {
+                    circleBox.classList.add('urgent');
+                }
+
+                // 高考最后3天：疯狂闪烁
+                if (diff2 <= 3 * 24 * 60 * 60 * 1000) {
+                    setInterval(() => {
+                        if (Math.random() < 0.3) triggerFlashWarning();
+                    }, 2000);
+                }
+
+                updatePressureBar(diff2);
+                return;
+            }
+
+            // 阶段三：全部结束
+            bodyEl.style.backgroundColor = '#0a1a0a';
+            bodyEl.style.color = '#4a8a4a';
+            titleEl.textContent = '结束了';
+            titleEl.style.color = '#2a6a2a';
+            titleEl.setAttribute('data-text', '结束了');
+
+            circleBox.style.border = '3px solid #2a6a2a';
+            circleBox.style.boxShadow = '0 0 40px rgba(42, 106, 42, 0.3)';
+            circleBox.classList.remove('urgent');
+            circleBox.style.animation = 'none';
+
+            timerDisplay.className = 'message-text';
+            timerDisplay.style.color = '#4a8a4a';
+            timerDisplay.innerHTML = '一切都结束了<br><span style="font-size:1rem; color:#555; font-weight:normal;">希望你没有辜负这些时间</span>';
+
+            document.getElementById('footer-text').style.color = '#2a4a2a';
+            document.getElementById('dark-quote').style.display = 'none';
+            document.getElementById('anxiety-counter').style.display = 'none';
+            document.getElementById('waste-reminder').style.display = 'none';
+            pressureBar.style.display = 'none';
+        }
+
+        // 初始化并每秒更新
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+
+        // ========== 开发者模式 ==========
+        const devPanel = document.getElementById('dev-panel');
+        const devOverlay = document.getElementById('dev-overlay');
+        const devDateInput = document.getElementById('dev-date-input');
+        const devTimeInput = document.getElementById('dev-time-input');
+        const devStatus = document.getElementById('dev-status');
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+
+        function formatForInput(ts) {
+            const d = new Date(ts);
+            return {
+                date: d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()),
+                time: pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds())
+            };
+        }
+
+        function nowToInput() {
+            const ts = getCurrentTime();
+            const f = formatForInput(ts);
+            devDateInput.value = f.date;
+            devTimeInput.value = f.time;
+        }
+
+        function toggleDevPanel() {
+            const isActive = devPanel.classList.toggle('active');
+            devOverlay.classList.toggle('active', isActive);
+            if (isActive) {
+                nowToInput();
+                devStatus.textContent = fakeTime !== null
+                    ? '伪造时间生效中 · ' + formatForInput(fakeTime).date + ' ' + formatForInput(fakeTime).time
+                    : '使用真实时间';
+                devStatus.classList.toggle('active', fakeTime !== null);
+                setTimeout(() => devDateInput.focus(), 100);
+            }
+        }
+
+        function closeDevPanel() {
+            devPanel.classList.remove('active');
+            devOverlay.classList.remove('active');
+        }
+
+        // D 键开关
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'd' || e.key === 'D') {
+                if (e.target.tagName === 'INPUT') return;
+                toggleDevPanel();
+            }
+            if (e.key === 'Escape') {
+                closeDevPanel();
+            }
+        });
+
+        // 遮罩点击关闭
+        devOverlay.addEventListener('click', closeDevPanel);
+
+        // 关闭按钮
+        document.getElementById('dev-close-btn').addEventListener('click', closeDevPanel);
+
+        // 应用伪造时间
+        document.getElementById('dev-apply-btn').addEventListener('click', function() {
+            const dateStr = devDateInput.value;
+            const timeStr = devTimeInput.value;
+            if (!dateStr || !timeStr) {
+                devStatus.textContent = '请填写完整的日期和时间';
+                devStatus.classList.add('active');
+                return;
+            }
+            const ts = new Date(dateStr + 'T' + timeStr).getTime();
+            if (isNaN(ts)) {
+                devStatus.textContent = '日期格式无效';
+                devStatus.classList.add('active');
+                return;
+            }
+            fakeTime = ts;
+
+            // 重置阶段二语录状态，让 updateCountdown 重新走逻辑
+            clearInterval(quoteInterval);
+            currentQuoteIndex = 0;
+            quoteInterval = setInterval(() => rotateQuote(false), 5000);
+
+            updateCountdown();
+            const f = formatForInput(fakeTime);
+            devStatus.textContent = '已伪造为 ' + f.date + ' ' + f.time;
+            devStatus.classList.add('active');
+        });
+
+        // 恢复真实时间
+        document.getElementById('dev-reset-btn').addEventListener('click', function() {
+            fakeTime = null;
+            nowToInput();
+
+            clearInterval(quoteInterval);
+            currentQuoteIndex = 0;
+            quoteInterval = setInterval(() => rotateQuote(false), 5000);
+
+            updateCountdown();
+            devStatus.textContent = '已恢复真实时间';
+            devStatus.classList.remove('active');
+        });
+
+        // 预设按钮
+        const presets = {
+            'stage1-start': new Date('2026-08-29T16:00:00').getTime(),
+            'stage1-end':   new Date('2026-08-30T16:00:00').getTime(),
+            'stage2-start': new Date('2026-08-31T08:00:00').getTime(),
+            'exam-7d':      new Date('2027-06-02T18:00:00').getTime(),
+            'exam-3d':      new Date('2027-06-06T18:00:00').getTime(),
+            'exam-day':     new Date('2027-06-09T09:00:00').getTime(),
+            'after-exam':   new Date('2027-06-09T19:00:00').getTime()
+        };
+
+        document.querySelectorAll('.dev-preset-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const ts = presets[this.dataset.preset];
+                const f = formatForInput(ts);
+                devDateInput.value = f.date;
+                devTimeInput.value = f.time;
+            });
+        });
+    </script>
+</body>
+</html>
